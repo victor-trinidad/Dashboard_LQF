@@ -97,8 +97,8 @@ if uploaded_file is not None:
         porcentaje_cumplimiento = (1 - (transacciones_desviadas / total_transacciones)) * 100 if total_transacciones > 0 else 0
         valor_neto_desviado = pd.to_numeric(desvios['Valor neto'], errors='coerce').sum()
         
-        # --- Implementación de Pestañas (Tabs) para organizar la visualización ---
-        tab1, tab2 = st.tabs(["📊 Resumen Ejecutivo", "⚠️ Análisis Detallado de Riesgo"])
+        # --- Implementación de 3 Pestañas (Tabs) ---
+        tab1, tab2, tab3 = st.tabs(["📊 Resumen Ejecutivo", "⚠️ Análisis Detallado de Riesgo", "📝 Listado Completo Verificado"])
 
         with tab1:
             st.header("Métricas Clave de Cumplimiento")
@@ -131,18 +131,37 @@ if uploaded_file is not None:
                 
                 st.markdown("---")
                 
-                # DETALLE DE LA TABLA DE AUDITORÍA
+                # DETALLE DE LA TABLA DE AUDITORÍA (Solo desvíos)
                 st.subheader("Tabla Detallada de las Desviaciones")
                 columnas_auditoria = ['Fecha factura', 'Almacen', 'Nombre 1', 'Codigo', 'Material', 'Jerarquia', '% Desc', 'Valor neto', 'Alerta_Descuento']
                 st.dataframe(desvios[columnas_auditoria], use_container_width=True)
                 
-                # Opción para descargar
+                # Opción para descargar solo los desvíos
                 csv = desvios[columnas_auditoria].to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="Descargar Alertas en CSV", data=csv, file_name='Reporte_Desviaciones_LQF.csv', mime='text/csv',)
                 
             else:
                 st.info("No hay desvíos que analizar en este reporte. El cumplimiento es total.")
+
+        with tab3:
+            st.subheader("Listado de Todas las Transacciones Verificadas")
+            st.info("Esta tabla muestra todas las líneas del archivo cargado con el resultado de la auditoría (OK o Alerta).")
+
+            # Columnas seleccionadas para el listado completo
+            columnas_completas = ['Fecha factura', 'Almacen', 'Nombre 1', 'Codigo', 'Material', 'Jerarquia', 'Cant', '% Desc', 'Valor neto', 'Alerta_Descuento']
+            
+            # Display del DataFrame completo
+            st.dataframe(df_completo[columnas_completas], use_container_width=True)
+
+            # Opción para descargar el archivo completo con la columna de alerta
+            csv_completo = df_completo[columnas_completas].to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Descargar Listado Completo Auditado en CSV", 
+                data=csv_completo, 
+                file_name='Reporte_Completo_Auditado_LQF.csv', 
+                mime='text/csv'
+            )
             
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo. Error: {e}")
