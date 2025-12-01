@@ -77,37 +77,44 @@ def ejecutar_auditoria(df):
 st.set_page_config(page_title="Auditoría Continua de Precios LQF", layout="wide")
 st.title("🛡️ Dashboard de Auditoría de Desviaciones de Precios - LQF")
 
-# --- Mover el uploader y los filtros a la barra lateral ---
+# --- Mover el uploader a la barra lateral (debe quedarse aquí) ---
 with st.sidebar:
-    st.header("⚙️ Configuración y Filtros")
+    st.header("⚙️ Carga de Reporte")
     uploaded_file = st.file_uploader("Subir Reporte de Ventas (CSV/XLSX)", type=['csv', 'xlsx'])
-    
     st.markdown("---")
-    st.subheader("Opciones de Filtrado")
-    
-    # FILTRO 1: Excluir Ventas a Empleados/Médicos (Zona de Venta)
-    excluir_empleados = st.checkbox(
-        'Excluir Ventas a Empleados/Médicos', 
-        value=True, 
-        help='Si está tildado, se excluyen las ventas con Zona de Venta: EMPLEADOS LQF y MEDICOS PARTICULARES del análisis.'
-    )
+    st.info("Utilice los filtros del cuerpo principal para ajustar el alcance de la auditoría.")
 
-    # FILTRO 2: Excluir Ventas del Depósito 1012 (Ofertas)
-    excluir_1012 = st.checkbox(
-        'Excluir Ventas del Depósito 1012 (Ofertas)', 
-        value=True, 
-        help='Si está tildado, se excluyen las ventas provenientes del Almacén 1012 del análisis.'
-    )
-
-    # FILTRO 3: Ver solo Materiales Controlados (NUEVO)
-    ver_solo_controlados = st.checkbox(
-        'Ver solo Materiales Controlados', 
-        value=False, 
-        help='Si está tildado, la auditoría y los reportes se limitarán solo a los códigos que están en la lista de control.'
-    )
-
-
+# --- FILTROS EN EL CUERPO PRINCIPAL (TOP DERECHA) ---
 if uploaded_file is not None:
+    
+    st.subheader("Opciones de Análisis Rápido")
+    
+    # Usamos 4 columnas para colocar los 3 filtros y dejar espacio
+    col_filtro1, col_filtro2, col_filtro3, col_espacio = st.columns([1.5, 1.5, 1.5, 3])
+    
+    with col_filtro1:
+        excluir_empleados = st.checkbox(
+            'Excluir Empleados/Médicos', 
+            value=True, 
+            help='Excluye ventas con Zona de Venta: EMPLEADOS LQF y MEDICOS PARTICULARES.'
+        )
+
+    with col_filtro2:
+        excluir_1012 = st.checkbox(
+            'Excluir Almacén 1012', 
+            value=True, 
+            help='Excluye ventas provenientes del Almacén 1012 (Ofertas).'
+        )
+
+    with col_filtro3:
+        ver_solo_controlados = st.checkbox(
+            'Ver solo Materiales Controlados', 
+            value=False, 
+            help='Limita la auditoría solo a los códigos que están en la lista de control.'
+        )
+        
+    st.markdown("---") 
+
     try:
         # 1. Carga de datos con corrección de encabezado
         if uploaded_file.name.endswith('.csv'):
@@ -135,7 +142,7 @@ if uploaded_file is not None:
 
 
         if df_filtrado.empty:
-            st.warning("El archivo cargado no contiene transacciones después de aplicar los filtros seleccionados. Intente destildar alguna opción en la barra lateral.")
+            st.warning("El archivo cargado no contiene transacciones después de aplicar los filtros seleccionados. Intente destildar alguna opción.")
             st.stop()
             
         # 3. Ejecutar auditoría sobre el DataFrame filtrado
@@ -196,7 +203,7 @@ if uploaded_file is not None:
 
         with tab3:
             st.subheader("Listado de Todas las Transacciones Verificadas")
-            st.info("Esta tabla muestra todas las líneas del archivo cargado con el resultado de la auditoría (OK o Alerta), luego de aplicar los filtros del sidebar.")
+            st.info("Esta tabla muestra todas las líneas del archivo cargado con el resultado de la auditoría (OK o Alerta), luego de aplicar los filtros.")
 
             # Columnas seleccionadas para el listado completo
             columnas_completas = ['Fecha factura', 'Almacen', 'Nombre 1', 'Codigo', 'Material', 'Jerarquia', 'Cant', '% Desc', 'Valor neto', 'Alerta_Descuento']
