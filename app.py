@@ -18,7 +18,7 @@ DESC_MAX_EMPLEADOS = 0.0
 DESC_MAX_NUTRICIA_BEBELAC = 6.0
 DESC_MAX_GENERAL = 7.0
 
-# Reglas de Intercompany (CONFIRMADAS)
+# Reglas de Intercompany
 DESC_INTERCOMPANY_200046 = 11.0 
 DESC_INTERCOMPANY_200173 = 10.0
 CLIENTE_200046 = '200046'
@@ -85,20 +85,25 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("Opciones de Filtrado")
     
-    # FILTRO 1: Ventas a Funcionarios/Médicos (Zona de Venta)
-    # Por defecto se excluyen (True) para enfocarse en ventas comerciales
+    # FILTRO 1: Excluir Ventas a Empleados/Médicos (Zona de Venta)
     excluir_empleados = st.checkbox(
         'Excluir Ventas a Empleados/Médicos', 
         value=True, 
         help='Si está tildado, se excluyen las ventas con Zona de Venta: EMPLEADOS LQF y MEDICOS PARTICULARES del análisis.'
     )
 
-    # FILTRO 2: Ventas del Depósito 1012 (Ofertas)
-    # Por defecto se excluyen (True) si son ofertas especiales no sujetas a auditoría
+    # FILTRO 2: Excluir Ventas del Depósito 1012 (Ofertas)
     excluir_1012 = st.checkbox(
         'Excluir Ventas del Depósito 1012 (Ofertas)', 
         value=True, 
         help='Si está tildado, se excluyen las ventas provenientes del Almacén 1012 del análisis.'
+    )
+
+    # FILTRO 3: Ver solo Materiales Controlados (NUEVO)
+    ver_solo_controlados = st.checkbox(
+        'Ver solo Materiales Controlados', 
+        value=False, 
+        help='Si está tildado, la auditoría y los reportes se limitarán solo a los códigos que están en la lista de control.'
     )
 
 
@@ -112,12 +117,22 @@ if uploaded_file is not None:
         
         # 2. Aplicación de Filtros seleccionados
         df_filtrado = df.copy()
-
+        
+        # Asegurar que la columna 'Almacen' y 'Zona de Venta' tengan el formato correcto para los filtros
+        df_filtrado['Almacen'] = pd.to_numeric(df_filtrado['Almacen'], errors='coerce', downcast='integer')
+        df_filtrado['Zona de Venta'] = df_filtrado['Zona de Venta'].astype(str)
+        
         if excluir_empleados:
             df_filtrado = df_filtrado[~df_filtrado['Zona de Venta'].isin(ZONAS_EMPLEADOS)]
 
         if excluir_1012:
             df_filtrado = df_filtrado[df_filtrado['Almacen'] != ALMACEN_OFERTAS]
+            
+        if ver_solo_controlados:
+            # Asegurar que la columna 'Codigo' sea string para la comparación con la lista
+            df_filtrado['Codigo'] = df_filtrado['Codigo'].astype(str) 
+            df_filtrado = df_filtrado[df_filtrado['Codigo'].isin(codigos_controlados)]
+
 
         if df_filtrado.empty:
             st.warning("El archivo cargado no contiene transacciones después de aplicar los filtros seleccionados. Intente destildar alguna opción en la barra lateral.")
