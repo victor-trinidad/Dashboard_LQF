@@ -74,7 +74,12 @@ def ejecutar_auditoria(df):
 
 st.set_page_config(page_title="Auditoría Continua de Precios LQF", layout="wide")
 st.title("🛡️ Dashboard de Auditoría de Desviaciones de Precios - LQF")
-uploaded_file = st.file_uploader("Subir Reporte de Ventas (CSV/XLSX)", type=['csv', 'xlsx'])
+
+# --- Mover el uploader a la barra lateral ---
+with st.sidebar:
+    st.header("⚙️ Configuración y Carga de Datos")
+    uploaded_file = st.file_uploader("Subir Reporte de Ventas (CSV/XLSX)", type=['csv', 'xlsx'])
+
 
 if uploaded_file is not None:
     try:
@@ -89,4 +94,55 @@ if uploaded_file is not None:
         # CÁLCULO DE KPIs (Métricas)
         total_transacciones = len(df_completo)
         transacciones_desviadas = len(desvios)
-        porcentaje_cumplimiento = (1 - (transacciones_desviadas / total_transacciones)) * 100 if total_transacciones > 0
+        porcentaje_cumplimiento = (1 - (transacciones_desviadas / total_transacciones)) * 100 if total_transacciones > 0 else 0
+        valor_neto_desviado = pd.to_numeric(desvios['Valor neto'], errors='coerce').sum()
+        
+        # --- Implementación de Pestañas (Tabs) para organizar la visualización ---
+        tab1, tab2 = st.tabs(["📊 Resumen Ejecutivo", "⚠️ Análisis Detallado de Riesgo"])
+
+        with tab1:
+            st.header("Métricas Clave de Cumplimiento")
+            
+            # Display de KPIs
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Transacciones Auditadas", f"{total_transacciones:,}")
+            col2.metric("Transacciones con Desvío", f"{transacciones_desviadas:,}", delta=f"{transacciones_desviadas} líneas de riesgo")
+            col3.metric("Nivel de Cumplimiento", f"{porcentaje_cumplimiento:.2f}%", delta=f"{(100 - porcentaje_cumplimiento):.2f}% de Incumplimiento", delta_color="inverse")
+            col4.metric("Valor Neto de Desvíos (Gs.)", f"Gs. {valor_neto_desviado:,.0f}")
+            
+            st.markdown("---") 
+            
+            if not desvios.empty:
+                st.info(f"Se encontraron **{transacciones_desviadas:,}** transacciones con desvío. Revise la pestaña 'Análisis Detallado de Riesgo'.")
+            else:
+                st.balloons()
+                st.subheader("✅ ¡CUMPLIMIENTO TOTAL!")
+                st.info("No se encontraron desviaciones en este reporte según las reglas definidas. Todos los descuentos aplicados están dentro de la política.")
+
+        with tab2:
+            if not desvios.empty:
+                st.subheader("Gráfico de Riesgo: Distribución de Alertas por Tipo")
+                
+                # Gráfico de Barras
+                alerta_counts = desvios['Alerta_Descuento'].value_counts().reset_index()
+                alerta_counts.columns = ['Tipo de Alerta', 'Cantidad de Desvíos']
+                alerta_counts = alerta_counts.set_index('Tipo de Alerta')
+                st.bar_chart(alerta_counts, use_container_width=True, color='#f03c3c') 
+                
+                st.markdown("---")
+                
+                # DETALLE DE LA TABLA DE AUDITORÍA
+                st.subheader("Tabla Detallada de las Desviaciones")
+                columnas_auditoria = ['Fecha factura', 'Almacen', 'Nombre 1', 'Codigo', 'Material', 'Jerarquia', '% Desc', 'Valor neto', 'Alerta_Descuento']
+                st.dataframe(desvios[columnas_auditoria], use_container_width=True)
+                
+                # Opción para descargar
+                csv = desvios[columnas_auditoria].to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Descargar Alertas en CSV", data=csv, file_name='Reporte_Desviaciones_LQF.csv', mime='text/csv',)
+                
+            else:
+                st.info("No hay desvíos que analizar en este reporte. El cumplimiento es total.")
+            
+    except Exception as e:
+        st.error(f"Ocurrió un error al procesar el archivo. Error: {e}")
