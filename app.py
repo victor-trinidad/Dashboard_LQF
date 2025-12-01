@@ -24,7 +24,9 @@ DESC_INTERCOMPANY_200173 = 10.0
 CLIENTE_200046 = '200046'
 CLIENTE_200173 = '200173'
 ALMACEN_EMPLEADOS_PERMITIDO = 1041
+ALMACEN_OFERTAS = 1012
 marcas_6_porciento = ['NUTRICIA', 'BEBELAC']
+ZONAS_EMPLEADOS = ['EMPLEADOS LQF', 'MEDICOS PARTICULARES']
 
 
 # --- 2. FUNCIÓN PRINCIPAL DE AUDITORÍA (CON LIMPIEZA DE COLUMNAS) ---
@@ -60,7 +62,7 @@ def ejecutar_auditoria(df):
     ]
     etiquetas_alerta = [
         '❌ Ilegal (Empleado/Médico)', '⚠️ Controlado (>5%) Excedido',
-        '⚠️ Intercompany 200046 (>11%) Excedido', '⚠️ Intercompany 200173 (>10%) Excedido',
+        '⚠️ Intercompany 200046 (>11%) Excedido', '⚠️ Intercompany 201173 (>10%) Excedido',
         '⚠️ Marca Nutricion (>6%) Excedido', '⚠️ General (>7%) Excedido'
     ]
 
@@ -75,21 +77,54 @@ def ejecutar_auditoria(df):
 st.set_page_config(page_title="Auditoría Continua de Precios LQF", layout="wide")
 st.title("🛡️ Dashboard de Auditoría de Desviaciones de Precios - LQF")
 
-# --- Mover el uploader a la barra lateral ---
+# --- Mover el uploader y los filtros a la barra lateral ---
 with st.sidebar:
-    st.header("⚙️ Configuración y Carga de Datos")
+    st.header("⚙️ Configuración y Filtros")
     uploaded_file = st.file_uploader("Subir Reporte de Ventas (CSV/XLSX)", type=['csv', 'xlsx'])
+    
+    st.markdown("---")
+    st.subheader("Opciones de Filtrado")
+    
+    # FILTRO 1: Ventas a Funcionarios/Médicos (Zona de Venta)
+    # Por defecto se excluyen (True) para enfocarse en ventas comerciales
+    excluir_empleados = st.checkbox(
+        'Excluir Ventas a Empleados/Médicos', 
+        value=True, 
+        help='Si está tildado, se excluyen las ventas con Zona de Venta: EMPLEADOS LQF y MEDICOS PARTICULARES del análisis.'
+    )
+
+    # FILTRO 2: Ventas del Depósito 1012 (Ofertas)
+    # Por defecto se excluyen (True) si son ofertas especiales no sujetas a auditoría
+    excluir_1012 = st.checkbox(
+        'Excluir Ventas del Depósito 1012 (Ofertas)', 
+        value=True, 
+        help='Si está tildado, se excluyen las ventas provenientes del Almacén 1012 del análisis.'
+    )
 
 
 if uploaded_file is not None:
     try:
-        # CORRECCIÓN DE ENCABEZADO: Usamos header=1 para saltar la primera fila
+        # 1. Carga de datos con corrección de encabezado
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, encoding='latin1', header=1) 
         else:
             df = pd.read_excel(uploaded_file, header=1)
+        
+        # 2. Aplicación de Filtros seleccionados
+        df_filtrado = df.copy()
+
+        if excluir_empleados:
+            df_filtrado = df_filtrado[~df_filtrado['Zona de Venta'].isin(ZONAS_EMPLEADOS)]
+
+        if excluir_1012:
+            df_filtrado = df_filtrado[df_filtrado['Almacen'] != ALMACEN_OFERTAS]
+
+        if df_filtrado.empty:
+            st.warning("El archivo cargado no contiene transacciones después de aplicar los filtros seleccionados. Intente destildar alguna opción en la barra lateral.")
+            st.stop()
             
-        desvios, df_completo = ejecutar_auditoria(df)
+        # 3. Ejecutar auditoría sobre el DataFrame filtrado
+        desvios, df_completo = ejecutar_auditoria(df_filtrado)
         
         # CÁLCULO DE KPIs (Métricas)
         total_transacciones = len(df_completo)
@@ -117,7 +152,7 @@ if uploaded_file is not None:
             else:
                 st.balloons()
                 st.subheader("✅ ¡CUMPLIMIENTO TOTAL!")
-                st.info("No se encontraron desviaciones en este reporte según las reglas definidas. Todos los descuentos aplicados están dentro de la política.")
+                st.info("No se encontraron desviaciones en este reporte según las reglas definidas.")
 
         with tab2:
             if not desvios.empty:
@@ -142,11 +177,11 @@ if uploaded_file is not None:
                     label="Descargar Alertas en CSV", data=csv, file_name='Reporte_Desviaciones_LQF.csv', mime='text/csv',)
                 
             else:
-                st.info("No hay desvíos que analizar en este reporte. El cumplimiento es total.")
+                st.info("No hay desvíos que analizar en este reporte.")
 
         with tab3:
             st.subheader("Listado de Todas las Transacciones Verificadas")
-            st.info("Esta tabla muestra todas las líneas del archivo cargado con el resultado de la auditoría (OK o Alerta).")
+            st.info("Esta tabla muestra todas las líneas del archivo cargado con el resultado de la auditoría (OK o Alerta), luego de aplicar los filtros del sidebar.")
 
             # Columnas seleccionadas para el listado completo
             columnas_completas = ['Fecha factura', 'Almacen', 'Nombre 1', 'Codigo', 'Material', 'Jerarquia', 'Cant', '% Desc', 'Valor neto', 'Alerta_Descuento']
