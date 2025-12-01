@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# --- PARÁMETROS DE AUDITORÍA (REGLAS DE NEGOCIO LQF) ---
+# --- 1. PARÁMETROS DE AUDITORÍA (REGLAS DE NEGOCIO LQF) ---
 
 # 🔴 LISTA DE CÓDIGOS CONTROLADOS (MÁXIMO 5% DE DESCUENTO)
 codigos_controlados = [
@@ -27,11 +27,11 @@ ALMACEN_EMPLEADOS_PERMITIDO = 1041
 marcas_6_porciento = ['NUTRICIA', 'BEBELAC']
 
 
-# --- FUNCIÓN PRINCIPAL DE AUDITORÍA (CON LIMPIEZA DE COLUMNAS) ---
+# --- 2. FUNCIÓN PRINCIPAL DE AUDITORÍA (CON LIMPIEZA DE COLUMNAS) ---
 @st.cache_data
 def ejecutar_auditoria(df):
     
-    # 1. LIMPIEZA AUTOMÁTICA DE ENCABEZADOS (Para evitar fallos por espacios)
+    # 1. LIMPIEZA AUTOMÁTICA DE ENCABEZADOS (SOLUCIÓN A PROBLEMAS DE FORMATO)
     df.columns = df.columns.str.strip()
     column_mapping = {
         'Fecha factura': 'Fecha factura', 'Almacen': 'Almacen', 'Tipo Venta': 'Tipo Venta',
@@ -126,4 +126,5 @@ if uploaded_file is not None:
             st.info("No se encontraron desviaciones en este reporte según las reglas definidas.")
             
     except Exception as e:
+        # Esto te ayudará a diagnosticar si el error es de lectura o de nombre de columna
         st.error(f"Ocurrió un error al procesar el archivo. Verifique el formato o el nombre de las columnas. Error: {e}")
