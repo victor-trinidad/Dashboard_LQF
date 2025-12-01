@@ -73,9 +73,11 @@ uploaded_file = st.file_uploader("Subir Reporte de Ventas (CSV/XLSX)", type=['cs
 if uploaded_file is not None:
     try:
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, encoding='latin1') 
+            # CORRECCIÓN: Usamos header=1 para saltar la fila de subtítulos en el CSV
+            df = pd.read_csv(uploaded_file, encoding='latin1', header=1) 
         else:
-            df = pd.read_excel(uploaded_file)
+            # CORRECCIÓN: Usamos header=1 para saltar la fila de subtítulos en el XLSX
+            df = pd.read_excel(uploaded_file, header=1)
             
         desvios, df_completo = ejecutar_auditoria(df)
         
@@ -120,4 +122,5 @@ if uploaded_file is not None:
             st.info("No se encontraron desviaciones en este reporte según las reglas definidas.")
             
     except Exception as e:
+        # Mensaje de error más informativo
         st.error(f"Ocurrió un error al procesar el archivo. Verifique el formato o el nombre de las columnas. Error: {e}")
