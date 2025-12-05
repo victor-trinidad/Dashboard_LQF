@@ -172,7 +172,7 @@ if uploaded_file is not None:
             if not desvios.empty:
                 st.info(f"Se encontraron **{transacciones_desviadas:,}** transacciones con desvío. Revise la pestaña 'Análisis Detallado de Riesgo'.")
             else:
-                st.balloons()
+                # Se eliminó la línea st.balloons()
                 st.subheader("✅ ¡CUMPLIMIENTO TOTAL!")
                 st.info("No se encontraron desviaciones en este reporte según las reglas definidas.")
 
